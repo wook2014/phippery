@@ -2,10 +2,8 @@ __pycache__
 *.pyc
 .nextflow.log
 .sconsign.dblite
-Attic/
 data/simulate_small_ones_sep_reps/phip_data/
 data/simulate_small_ones_sep_reps_netcdf/
-dist/
 docs/.nextflow.log
 docs/Attic/
 docs/Streamlit
@@ -16,5 +14,4 @@ docs/phippery.escprof.rst
 docs/phippery.modeling.rst
 docs/phippery.normalize.rst
 docs/phippery.utils.rst
-phippery.egg-info/
-test/Attic/
+test/pickle_data/
