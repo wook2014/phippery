@@ -3,7 +3,8 @@
 By default, this script reads ``test/pickle_data/data.phip`` and writes:
 
 * ``test/pickle_data/data.gamma_poisson.phip`` (the complete xarray Dataset)
-* ``test/pickle_data/data.gamma_poisson_mlxp.csv`` (the score matrix only)
+* ``test/pickle_data/data.gamma_poisson_mlxp.csv`` (the score matrix only,
+  labeled by peptide and sample identifiers)
 """
 
 from __future__ import annotations
@@ -57,6 +58,22 @@ def parse_args() -> argparse.Namespace:
         default="gamma_poisson_mlxp",
         help="Name of the fitted score layer (default: gamma_poisson_mlxp)",
     )
+    parser.add_argument(
+        "--peptide-label-column",
+        default="Full_name",
+        help=(
+            "Column in peptide_table used as CSV row labels "
+            "(default: Full_name)"
+        ),
+    )
+    parser.add_argument(
+        "--sample-label-column",
+        default="sample_ID",
+        help=(
+            "Column in sample_table used as CSV column labels "
+            "(default: sample_ID)"
+        ),
+    )
     parser.add_argument("--starting-alpha", type=float, default=0.8)
     parser.add_argument("--starting-beta", type=float, default=0.1)
     parser.add_argument("--trim-percentile", type=float, default=99.9)
@@ -94,11 +111,76 @@ def validate_input(ds: xr.Dataset, data_table: str) -> None:
         raise ValueError(f"'{data_table}' contains negative values")
 
 
+def _metadata_labels(
+    ds: xr.Dataset,
+    table_name: str,
+    id_dim: str,
+    metadata_dim: str,
+    label_column: str,
+) -> np.ndarray:
+    """Return readable labels from a phippery sample_table or peptide_table."""
+    if table_name not in ds:
+        raise KeyError(f"Missing metadata table '{table_name}'")
+    table = ds[table_name]
+    if id_dim not in table.dims or metadata_dim not in table.dims:
+        raise ValueError(
+            f"'{table_name}' must contain dimensions '{id_dim}' and "
+            f"'{metadata_dim}'; got {table.dims}"
+        )
+    if label_column not in set(map(str, ds[metadata_dim].values)):
+        available = ", ".join(map(str, ds[metadata_dim].values))
+        raise KeyError(
+            f"Missing label column '{label_column}' in '{table_name}'. "
+            f"Available: {available}"
+        )
+
+    labels = table.loc[{metadata_dim: label_column}].values.astype(str)
+    if labels.size != ds.sizes[id_dim]:
+        raise ValueError(
+            f"Label column '{label_column}' in '{table_name}' has "
+            f"{labels.size} labels, expected {ds.sizes[id_dim]}"
+        )
+    if len(set(labels)) != len(labels):
+        raise ValueError(
+            f"Label column '{label_column}' in '{table_name}' contains "
+            "duplicate values; choose a unique metadata column instead"
+        )
+    return labels
+
+
+def score_table_as_labeled_dataframe(
+    ds: xr.Dataset,
+    score_table: str,
+    peptide_label_column: str,
+    sample_label_column: str,
+):
+    scores = ds[score_table].to_pandas()
+    scores.index = _metadata_labels(
+        ds,
+        table_name="peptide_table",
+        id_dim="peptide_id",
+        metadata_dim="peptide_metadata",
+        label_column=peptide_label_column,
+    )
+    scores.columns = _metadata_labels(
+        ds,
+        table_name="sample_table",
+        id_dim="sample_id",
+        metadata_dim="sample_metadata",
+        label_column=sample_label_column,
+    )
+    scores.index.name = peptide_label_column
+    scores.columns.name = sample_label_column
+    return scores
+
+
 def write_outputs(
     ds: xr.Dataset,
     output_dataset: Path,
     output_csv: Path,
     score_table: str,
+    peptide_label_column: str,
+    sample_label_column: str,
 ) -> None:
     output_dataset.parent.mkdir(parents=True, exist_ok=True)
     output_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -107,7 +189,12 @@ def write_outputs(
     csv_tmp = output_csv.with_name(f"{output_csv.name}.tmp")
     try:
         phippery.dump(ds, dataset_tmp)
-        ds[score_table].to_pandas().to_csv(csv_tmp, float_format="%.10g")
+        score_table_as_labeled_dataframe(
+            ds,
+            score_table,
+            peptide_label_column,
+            sample_label_column,
+        ).to_csv(csv_tmp, float_format="%.10g")
         dataset_tmp.replace(output_dataset)
         csv_tmp.replace(output_csv)
     finally:
@@ -134,6 +221,20 @@ def main() -> None:
     print(f"Loading Dataset: {input_path}")
     ds = phippery.load(input_path)
     validate_input(ds, args.data_table)
+    _metadata_labels(
+        ds,
+        table_name="peptide_table",
+        id_dim="peptide_id",
+        metadata_dim="peptide_metadata",
+        label_column=args.peptide_label_column,
+    )
+    _metadata_labels(
+        ds,
+        table_name="sample_table",
+        id_dim="sample_id",
+        metadata_dim="sample_metadata",
+        label_column=args.sample_label_column,
+    )
 
     alpha, beta = gamma_poisson_model(
         ds,
@@ -155,13 +256,24 @@ def main() -> None:
             "trim_percentile": float(args.trim_percentile),
             "starting_alpha": float(args.starting_alpha),
             "starting_beta": float(args.starting_beta),
+            "csv_peptide_label_column": args.peptide_label_column,
+            "csv_sample_label_column": args.sample_label_column,
         }
     )
-    write_outputs(ds, output_dataset, output_csv, args.new_table_name)
+    write_outputs(
+        ds,
+        output_dataset,
+        output_csv,
+        args.new_table_name,
+        args.peptide_label_column,
+        args.sample_label_column,
+    )
 
     print(f"Fitted alpha: {alpha:.10g}")
     print(f"Fitted beta:  {beta:.10g}")
     print(f"Score shape:  {ds[args.new_table_name].shape}")
+    print(f"CSV rows:     peptide_table['{args.peptide_label_column}']")
+    print(f"CSV columns:  sample_table['{args.sample_label_column}']")
     print(f"Dataset:     {output_dataset}")
     print(f"CSV:         {output_csv}")
 
