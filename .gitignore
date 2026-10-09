@@ -15,3 +15,7 @@ docs/phippery.modeling.rst
 docs/phippery.normalize.rst
 docs/phippery.utils.rst
 test/pickle_data/
+
+# Local troubleshooting files and server logs must not be published.
+/diagnostics/
+/diagnose/
