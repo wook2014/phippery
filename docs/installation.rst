@@ -27,22 +27,15 @@ Installation of the ``phippery`` python package is available through
 Alignments Pipeline
 ^^^^^^^^^^^^^^^^^^^
 
-For running the ``Nextflow`` alignments pipeline,
-we maintain a 
-`Dockerfile <https://github.com/matsengrp/phip-flow/blob/main/docker/Dockerfile>`_, 
-and host a pre-built 
-`public image <https://quay.io/repository/jgallowa/phip-flow>`_ 
-on quay.io for convenience.
+The root `phippery Dockerfile <https://github.com/matsengrp/phippery/blob/1.2.0/Dockerfile>`_
+installs phippery, Bowtie 1 and SAMtools. The separate
+`PhIP-Flow V1.12 Nextflow configuration <https://github.com/matsengrp/phip-flow/blob/V1.12/nextflow.config>`_
+uses ``quay.io/hdc-workflows/phippery:1.2.0`` for alignment and most other
+tasks, with a separate image for edgeR and BEER.
 
 .. note::
-    Note that the quay image is pointed to by default
-    in the pipeline configuration file --
-    meaning if you have both ``Docker`` and ``Nextflow``
-    installed, you have everything you need to run the pipeline 
-    with ``--profile docker`` specified after the ``nextflow run``
-    command. The other option would be to pull, 
-    or build the image yourself, then run the pipeline
-    within that container.
+    Run Nextflow on the host with ``-profile docker`` to launch the
+    tasks in their configured containers.
 
 To install
 `docker desktop <https://www.docker.com/products/docker-desktop>`_ 
