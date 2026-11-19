@@ -6,7 +6,9 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Docker Repository on Quay](https://quay.io/repository/hdc-workflows/phippery/status "Docker Repository on Quay")](https://quay.io/repository/hdc-workflows/phippery)
-[![build and test](https://github.com/matsengrp/phippery/workflows/build%20and%20test/badge.svg)](https://github.com/matsengrp/phippery/blob/master/.github/workflows/build-and-test.yaml)
+[![build and test](https://github.com/matsengrp/phippery/actions/workflows/build-and-test.yaml/badge.svg?branch=main)](https://github.com/matsengrp/phippery/actions/workflows/build-and-test.yaml)
+[![docs](https://github.com/matsengrp/phippery/actions/workflows/docs_pages_workflow.yml/badge.svg?branch=main)](https://github.com/matsengrp/phippery/actions/workflows/docs_pages_workflow.yml)
+[![package](https://github.com/matsengrp/phippery/actions/workflows/package.yaml/badge.svg?branch=main)](https://github.com/matsengrp/phippery/actions/workflows/package.yaml)
 
 A set of functions designed to query an 
 [xarray DataSet](http://xarray.pydata.org/en/stable/user-guide/data-structures.html#dataset) 
